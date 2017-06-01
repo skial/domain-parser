@@ -2,7 +2,7 @@
   "name": "domain-parser",
   "license": "MIT",
   "classPath": "src",
-  "tags": [uhx", "types", "domain", "name", "parser", "domain parser"],
+  "tags": ["uhx", "types", "domain", "name", "parser", "domain parser"],
   "description": "A library that parses `www.google.com` into `subdomain.domain.tld` portions.",
   "contributors": ["skial"],
   "releasenote": "Initial Release",
