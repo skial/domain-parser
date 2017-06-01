@@ -1,0 +1,25 @@
+-cp src
+-cp tests
+
+-lib unifill
+-lib tink_macro
+-lib country-codes
+
+-debug
+-dce full
+-D analyzer-optimize
+
+-main Main
+
+--each
+
+-cp gen
+--macro gen.Build.generate()
+
+--next
+
+-js bin/domain.js
+
+--next 
+
+-neko bin/domain.n
