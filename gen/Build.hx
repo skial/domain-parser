@@ -3,7 +3,6 @@ package gen;
 import haxe.macro.Expr;
 import haxe.macro.Printer;
 import haxe.macro.Context;
-import uhx.types.Countries;
 import haxe.Constraints.IMap;
 import uhx.types.AssociativeArray;
 

@@ -1,0 +1,16 @@
+{
+  "name": "domain-parser",
+  "license": "MIT",
+  "classPath": "src",
+  "tags": [uhx", "types", "domain", "name", "parser", "domain parser"],
+  "description": "A library that parses `www.google.com` into `subdomain.domain.tld` portions.",
+  "contributors": ["skial"],
+  "releasenote": "Initial Release",
+  "version": "0.0.1-alpha",
+  "url": "https://github.com/skial/domain-parser",
+  "dependencies": {
+    "utest": "",
+    "unifill": "",
+    "tink_macro": ""
+  }
+}

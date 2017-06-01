@@ -1,9 +1,10 @@
 -cp src
 -cp tests
 
+-lib utest
 -lib unifill
+-lib tink_core
 -lib tink_macro
--lib country-codes
 
 -debug
 -dce full
@@ -13,10 +14,10 @@
 
 --each
 
--cp gen
---macro gen.Build.generate()
+#-cp gen
+#--macro gen.Build.generate()
 
---next
+#--next
 
 -js bin/domain.js
 
