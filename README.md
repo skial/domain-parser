@@ -8,7 +8,7 @@
 
 ## Api
 
-### [DomainParts](https://github.com/skial/domain/blob/master/src/uhx/types/domains/DomainParts.hx) API
+### [DomainParts](https://github.com/skial/domain-parser/blob/master/src/uhx/types/domains/DomainParts.hx) API
 
 ```Haxe
 enum DomainParts {
@@ -18,13 +18,13 @@ enum DomainParts {
 }
 ```
 
-### [Recursive](https://github.com/skial/domain/blob/master/src/uhx/types/Recursive.hx) Type
+### [Recursive](https://github.com/skial/domain-parser/blob/master/src/uhx/types/Recursive.hx) Type
 
 ```Haxe
 typedef Recursive = Map<String, haxe.ds.Option<Recursive>>;
 ```
 
-### [Domain](https://github.com/skial/domain/blob/master/src/uhx/types/Domain.hx) API
+### [Domain](https://github.com/skial/domain-parser/blob/master/src/uhx/types/Domain.hx) API
 
 ```Haxe
 class Domain {
