@@ -33,7 +33,7 @@ International ccTLD's, like `中国` for China, _simplified_, return the same li
 ```Haxe
 class Domain {
     public static var icann:Recursive;
-    public static function parse(domain:String):haxe.ds.Option<Array<DomainParts>>;
+    public static function parse(domain:String, ?tlds:Array<String->Bool>, ?slds:Array<String->Bool>):haxe.ds.Option<Array<DomainParts>>;
     // ccTLD's that have known descenants can be accessed directly.
     public static var UK:Recursive;
     public static var CN:Recursive;

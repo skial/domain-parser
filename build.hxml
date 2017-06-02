@@ -6,7 +6,7 @@
 -lib tink_core
 -lib tink_macro
 
--debug
+#-debug
 -dce full
 -D analyzer-optimize
 
@@ -14,10 +14,10 @@
 
 --each
 
-#-cp gen
-#--macro gen.Build.generate()
+-cp gen
+--macro gen.Build.generate()
 
-#--next
+--next
 
 -js bin/domain.js
 

@@ -1,4 +1,4 @@
-package uhx.types;
+package uhx.types.domains;
 
 import haxe.Constraints.IMap;
 

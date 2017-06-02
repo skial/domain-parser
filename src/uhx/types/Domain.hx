@@ -191,14 +191,42 @@ class Domain {
 	static public var CI : uhx.types.Recursive = ["aéroport" => empty, "int" => empty, "md" => empty, "edu" => empty, "ac" => empty, "ed" => empty, "go" => empty, "net" => empty, "co" => empty, "gouv" => empty, "org" => empty, "presse" => empty, "asso" => empty, "or" => empty, "com" => empty];
 	static public var AI : uhx.types.Recursive = ["off" => empty, "net" => empty, "org" => empty, "com" => empty];
 	static public var TN : uhx.types.Recursive = ["ind" => empty, "agrinet" => empty, "gov" => empty, "rnu" => empty, "turen" => empty, "edunet" => empty, "defense" => empty, "nat" => empty, "rnrt" => empty, "perso" => empty, "tourism" => empty, "ens" => empty, "fin" => empty, "intl" => empty, "net" => empty, "info" => empty, "org" => empty, "rns" => empty, "com" => empty, "mincom" => empty];
-	static public function parse(domain:String):haxe.ds.Option<Array<uhx.types.domains.DomainParts>> {
+	static public function parse(domain:String, ?tlds:Array<String -> Bool>, ?slds:Array<String -> Bool>):haxe.ds.Option<Array<uhx.types.domains.DomainParts>> {
 		var result = None;
 		var parts = domain.split('.');
-		var idx = parts.length - 1;
+		var len = parts.length - 1;
+		var idx = len;
 		var map = icann;
 		while (idx != -1) {
 			var part = parts[idx];
-			if (map.exists(part)) {
+			var custom:Array<String -> Bool> = null;
+			if (idx == len) custom = tlds else if (idx == len - 1) custom = slds;
+			var customMatched = false;
+			if (custom != null && custom.length > 0) {
+				for (method in custom) if ((customMatched = method(part))) {
+					if (result.match(None)) {
+						result = Some([Tld([part])]);
+					} else {
+						switch result {
+							case Some(results):{
+								for (result in results) switch result {
+									case Tld(p):{
+										p.push(part);
+									};
+									case _:
+								};
+							};
+							case _:
+						};
+					};
+					break;
+				};
+				if (customMatched) {
+					idx--;
+					continue;
+				};
+			};
+			if (!customMatched && map.exists(part)) {
 				var value = map.get(part);
 				if (result.match(None)) {
 					result = Some([Tld([part])]);
@@ -206,8 +234,8 @@ class Domain {
 					switch result {
 						case Some(results):{
 							for (result in results) switch result {
-								case Tld(parts):{
-									parts.push(part);
+								case Tld(p):{
+									p.push(part);
 								};
 								case _:
 							};
@@ -229,8 +257,8 @@ class Domain {
 		switch result {
 			case Some(results):{
 				switch results[0] {
-					case Tld(parts) if (parts.length > 1):{
-						parts.reverse();
+					case Tld(p) if (p.length > 1):{
+						p.reverse();
 					};
 					case _:
 				};

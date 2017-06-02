@@ -99,4 +99,36 @@ using uhx.types.Domain;
         Assert.equals( tld_str, idn_str );
     }
 
+    public function testCustom() {
+        var uri1 = 'sub.haxe.custom.*';
+        var uri2 = 'www.haxe.org';
+        var value1 = uri1.parse([s -> s == '*'], [s -> s == 'custom']);
+        var value2 = uri2.parse([s -> s == '*'], [s -> s == 'custom']);
+        
+        switch value1 {
+            case Some(parts):
+                Assert.equals( 3, parts.length );
+                Assert.isTrue( parts[0].match( Subdomain(['sub']) ) );
+                Assert.isTrue( parts[1].match( Domain('haxe') ) );
+                Assert.isTrue( parts[2].match( Tld(['custom', '*']) ) );
+
+            case None:
+                Assert.fail('The result should not be empty.');
+
+        }
+        
+        switch value2 {
+            case Some(parts):
+                Assert.equals( 3, parts.length );
+                Assert.isTrue( parts[0].match( Subdomain(['www']) ) );
+                Assert.isTrue( parts[1].match( Domain('haxe') ) );
+                Assert.isTrue( parts[2].match( Tld(['org']) ) );
+
+            case None:
+                Assert.fail('The result should not be empty.');
+
+        }
+
+    }
+
 }
