@@ -23,7 +23,7 @@ using uhx.types.Domain;
 
     public function testUniversityOfOxford() {
         var values = 'www.ox.ac.uk'.parse();
-
+        
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -67,6 +67,36 @@ using uhx.types.Domain;
             case None:
                 Assert.fail('Result should not be empty.');
         }
+    }
+
+    public function testFetchChinaIDN_TLD() {
+        var cn_idn = '中国';
+        var cn_cc = 'cn';
+        Assert.isTrue( icann.exists(cn_cc),  'China\'s ccTLD should exist in the toplevel list.' );
+        Assert.isTrue( icann.exists(cn_idn), 'China\'s IDN ccTLD should exist in the toplevel list.' );
+        var cn_idnMap = switch icann.get(cn_idn) {
+            case Some(m):
+                Assert.isTrue(Lambda.count(m) > 0, 'The IDN should not be empty.');
+                m;
+
+            case None:
+                Assert.fail('The IDN map was empty.');
+                null;
+        }
+        var cn_tldMap = switch icann.get(cn_cc) {
+            case Some(m):
+                Assert.isTrue(Lambda.count(m) > 0, 'The TLD should not be empty.');
+                m;
+
+            case None:
+                Assert.fail('The TLD map was empty.');
+                null;
+        }
+
+        var tld_str = '' + [for (k in cn_tldMap.keys()) k];
+        var idn_str = '' + [for (k in cn_idnMap.keys()) k];
+        
+        Assert.equals( tld_str, idn_str );
     }
 
 }

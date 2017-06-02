@@ -2,6 +2,8 @@
 
 > A domain name parser.
 
+This expects only the domain, `www.google.com`, not `http://www.google.com/?query#hash`, use a URI parser first.
+
 ## Data
 
 [`public_suffix_list.dat.txt`](https://publicsuffix.org/list/public_suffix_list.dat) is from [publicsuffix.org](https://publicsuffix.org/) site. This is used to generate `uhx.types.Domain.hx`.
