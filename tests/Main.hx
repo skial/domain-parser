@@ -18,10 +18,10 @@ using uhx.types.Domain;
     }
 
     public function new() {
-
+        trace( uhx.types.Domain.icannGraph );
     }
 
-    public function testUniversityOfOxford() {
+    /*public function testUniversityOfOxford() {
         var values = 'www.ox.ac.uk'.parse();
         
         switch values {
@@ -129,6 +129,6 @@ using uhx.types.Domain;
 
         }
 
-    }
+    }*/
 
 }

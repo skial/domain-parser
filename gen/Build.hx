@@ -1,9 +1,14 @@
 package gen;
 
+import haxe.ds.Option;
 import haxe.macro.Expr;
 import haxe.macro.Printer;
 import haxe.macro.Context;
 import haxe.Constraints.IMap;
+import de.polygonal.ds.Graph;
+import uhx.types.domains.Node;
+import de.polygonal.ds.GraphNode;
+import uhx.types.domains.Node.NodeType;
 import uhx.types.domains.AssociativeArray;
 
 using Lambda;
@@ -19,6 +24,10 @@ typedef Mapped = AssociativeArray<Map<String, Mapped>>;
 class Build {
 
     public static function generate() {
+        var hash = new Map<String, Node>();
+        var index = new Map<String, GraphNode<Node>>();
+        var graph = new Graph<Node>();
+        
         var content:String = '${Sys.getCwd()}/res/public_suffix_list.dat.txt'.getContent();
         var icann = content.substring( content.indexOf("// ===BEGIN ICANN DOMAINS==="), content.indexOf("// ===END ICANN DOMAINS===") );
         //var priv = content.substring( content.indexOf("// ===BEGIN PRIVATE DOMAINS==="), content.indexOf("// ===END PRIVATE DOMAINS===") );
@@ -38,13 +47,15 @@ class Build {
         for (item in icannItems) {
             var next = tldMap;
             var parts = item.split('.');
+            var node:GraphNode<Node> = null;
             
             parts.reverse();
 
             for (i in 0...parts.length) {
-                var part = parts[i];
+                var part:String = parts[i];
 
                 if (part == '*' || part.startsWith('!')) continue;
+                
                 if (part.startsWith('::')) {
                     var pair = part.substring(2).split('::');
                     var cc = pair[0].toLowerCase();
@@ -59,16 +70,73 @@ class Build {
 
                     }
 
+                    var ccnode = null;
+                    var idnnode = null;
+                    if (index.exists(cc)) {
+                        ccnode = index.get( cc );
+
+                    } else {
+                        var key = new Node(cc, Root, cc.uLength(), parts.length);
+                        hash.set(cc, key);
+                        index.set(cc, ccnode = graph.add(key));
+                        key;
+
+                    }
+
+                    if (index.exists(idn)) {
+                        idnnode = index.get(idn);
+
+                    } else {
+                        var key = new Node(idn, Root, idn.uLength(), parts.length);
+                        hash.set(idn, key);
+                        index.set(idn, idnnode = graph.add(key));
+                        key;
+
+                    }
+
+                    graph.addMutualArc(idnnode, ccnode);
+
                 }
+
+                var prevNode = node;
+
+                if (i > 0) {
+                    if (index.exists(part)) {
+                        node = index.get(part);
+
+                    } else {
+                        index.set(part, node = graph.add( new Node(part) ));
+
+                    }
+
+                } else if (hash.exists(part)) {
+                    var r = hash.get(part);
+                    
+                    if (r.maxLength < item.uLength()) r.maxLength = parts.join('').uLength();
+                    if (r.segments < parts.length) r.segments = parts.length;
+
+                    index.get(part).val = r;
+                    hash.set(part, r);
+                    node = index.get(part);
+
+                } else {
+                    //var info = {len:part.uLength(), seg:parts.length}
+                    var r = new Node(part, Root, part.uLength(), parts.length);
+                    hash.set(part, r);
+                    index.set(part, node = graph.add(r));
+                }
+
+                if (prevNode != null) graph.addSingleArc(prevNode, node);
                 
                 if (i == 0 && part.uCharCodeAt(0) > 128) {
-                    // Its not ascii
+                    // Its not basic ascii
                     for (key in idnMap.keys()) {
                         if (idnMap.get(key).exists(part)) {
                             next = idnMap.get(key);
                             break;
 
                         }
+
                     }
 
                 }
@@ -93,11 +161,13 @@ class Build {
             
         }
         
+        var graphExpr = convertGraph(graph, index);
+        '${Sys.getCwd()}/info.txt'.saveContent( new haxe.macro.Printer().printExpr(graphExpr).replace('de.polygonal.ds.Graph', 'Graph').replace('uhx.types.domains.Node', 'Node') );
         var fields = toFields(tldMap, idnMap);
         var mapExpression = toMapExpression(tldMap, true, idnMap);
 
         var td = macro class Domain {
-
+/*
             public static function parse(domain:String, ?tlds:Array<String->Bool>, ?slds:Array<String->Bool>):haxe.ds.Option<Array<uhx.types.domains.DomainParts>> {
                 var result = haxe.ds.Option.None;
 
@@ -215,9 +285,9 @@ class Build {
                 }
 
                 return result;
-            }
-            public static var icann:uhx.types.Recursive = $mapExpression;
-
+            }*/
+            //public static var icann:uhx.types.Recursive = $mapExpression;
+            public static var icannGraph = $graphExpr;
         }
 
         td.pack = ['uhx', 'types'];
@@ -225,7 +295,7 @@ class Build {
                 // This needs to be the first field.
                 private static var empty = haxe.ds.Option.None;
             }).fields
-            .concat( fields )
+            //.concat( fields )
             .concat( td.fields );
         
         var output = new haxe.macro.Printer().printTypeDefinition(td, true);
@@ -237,6 +307,58 @@ class Build {
         '${Sys.getCwd()}/src/uhx/types/Domain.hx'.saveContent(parts.join(''));
     }
 
+    private static function convertGraph(graph:Graph<Node>, root:Map<String, GraphNode<Node>>):Expr {
+        var results:Array<Expr> = [];///[macro graph = new de.polygonal.ds.Graph<uhx.types.domains.Node>(), macro map = new Map<String, de.polygonal.ds.GraphNode<uhx.types.domains.Node>>()];
+        var rootCreations:Array<Expr> = [];
+        var nodeCreations:Array<Expr> = [];
+        var rootArcs:Array<Expr> = [];
+        var nodeArcs:Array<Expr> = [];
+        var positionMap = new Map<String, Int>();
+
+        graph.iter( function(node) {
+            var arcs = (node.type) ? rootArcs : nodeArcs;
+            var creations = (node.type) ? rootCreations : nodeCreations;
+            //if (node.type) {
+                var index = (node.type) ?
+                    creations.push( macro graph.add( new uhx.types.domains.Node($v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments}) )) 
+                    : creations.push( macro graph.add( new uhx.types.domains.Node($v{node.val} )) );
+                positionMap.set( node.val, index );
+                //creations.push( macro map.set( $v{node.val}, graph.add( new uhx.types.domains.Node($v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments})) ) );
+
+            //} else {
+                //creations.push( macro graph.add( new uhx.types.domains.Node($v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments}) ) );
+
+            //}
+            //if (processed.lastIndexOf( node.val ) == -1) processed.push( node.val );
+
+        } );
+
+        graph.iter( function(node) {
+            if (node.type && node.segments > 1) {
+                for (target in root.get(node.val).iterator()) {
+                    rootArcs.push( macro graph.addSingleArc( nodes[$v{positionMap.get(node.val)}], nodes[$v{positionMap.get(target.val)}] ) );
+
+                }
+
+            }
+
+        } );
+
+        results = results.concat( rootCreations ).concat( nodeCreations );
+        trace( results.length, rootCreations.length, nodeCreations.length );
+        return macro @:mergeBlock {
+            var graph = new de.polygonal.ds.Graph<uhx.types.domains.Node>();
+            var map = new Map<String, de.polygonal.ds.GraphNode<uhx.types.domains.Node>>();
+            var nodes:Array<de.polygonal.ds.GraphNode<uhx.types.domains.Node>> = $a{results};
+            for (node in nodes) {
+                if (node.val.type) map.set(node.val.val, node);
+                //graph.addNode(node);
+
+            }
+            @:mergeBlock $b{rootArcs};
+            graph;
+        }
+    }
 
     private static function toArrayExpression(maps:AssociativeArray<Map<String, Mapped>>):Array<Expr> {
         var results = [];
