@@ -18,12 +18,12 @@ using uhx.types.Domain;
     }
 
     public function new() {
-        trace( uhx.types.Domain.icannGraph );
+        //trace( uhx.types.Domain.graph );
     }
 
-    /*public function testUniversityOfOxford() {
+    public function testUniversityOfOxford() {
         var values = 'www.ox.ac.uk'.parse();
-        
+        //trace(values);
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -40,7 +40,7 @@ using uhx.types.Domain;
 
     public function testAwsS3() {
         var values = 'cdn.blah.com.s3.amazonaws.com'.parse();
-
+        //trace( values );
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -56,7 +56,7 @@ using uhx.types.Domain;
 
     public function testChinaIDN_TLD() {
         var values = 'sub.random.中国'.parse();
-        
+        //trace( values );
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -104,7 +104,8 @@ using uhx.types.Domain;
         var uri2 = 'www.haxe.org';
         var value1 = uri1.parse([s -> s == '*'], [s -> s == 'custom']);
         var value2 = uri2.parse([s -> s == '*'], [s -> s == 'custom']);
-        
+        //trace( value1 );
+        //trace( value2 );
         switch value1 {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -129,6 +130,6 @@ using uhx.types.Domain;
 
         }
 
-    }*/
+    }
 
 }

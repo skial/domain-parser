@@ -112,15 +112,14 @@ class Build {
                 } else if (hash.exists(part)) {
                     var r = hash.get(part);
                     
-                    if (r.maxLength < item.uLength()) r.maxLength = parts.join('').uLength();
-                    if (r.segments < parts.length) r.segments = parts.length;
+                    if (r.maxLength < item.uLength()) r.maxLength = parts.join('').uLength(); // TODO handle wildcards `*`
+                    if (r.segments < parts.filter(s->s!='*').length) r.segments = parts.filter(s->s!='*').length; // Handle wildcards `*`
 
                     index.get(part).val = r;
                     hash.set(part, r);
                     node = index.get(part);
 
                 } else {
-                    //var info = {len:part.uLength(), seg:parts.length}
                     var r = new Node(part, Root, part.uLength(), parts.length);
                     hash.set(part, r);
                     index.set(part, node = graph.add(r));
@@ -163,8 +162,8 @@ class Build {
         
         var graphExpr = convertGraph(graph, index);
         '${Sys.getCwd()}/info.txt'.saveContent( new haxe.macro.Printer().printExpr(graphExpr).replace('de.polygonal.ds.Graph', 'Graph').replace('uhx.types.domains.Node', 'Node') );
-        var fields = toFields(tldMap, idnMap);
-        var mapExpression = toMapExpression(tldMap, true, idnMap);
+        //var fields = toFields(tldMap, idnMap);
+        //var mapExpression = toMapExpression(tldMap, true, idnMap);
 
         var td = macro class Domain {
 /*
@@ -286,10 +285,106 @@ class Build {
 
                 return result;
             }*/
-            //public static var icann:uhx.types.Recursive = $mapExpression;
-            public static var icannGraph = $graphExpr;
-        }
+            public static function parse(domain:String, ?tlds:Array<String->Bool>, ?slds:Array<String->Bool>):haxe.ds.Option<Array<uhx.types.domains.DomainParts>> {
+                var results = {
+                    tlds:[],
+                    domain:'',
+                    subdomains:[],
+                }
 
+                var segments = domain.split('.');
+                var idx = segments.length-1;
+                
+                //while (idx != -1) {
+                    var segment = segments[idx];
+                    var exists = map.exists(segment);
+                    //trace(domain, segments, segment, exists);
+                    if (!exists && tlds != null && tlds.length > 0) {
+                        for (custom in tlds) if (custom(segment)) {
+                            results.tlds.push( segment );
+                            idx--;
+                            break;
+
+                        }
+
+                        if (slds != null && slds.length > 0) for (custom in slds) if (custom(segments[idx])) {
+                            results.tlds.push( segments[idx] );
+                            idx--;
+                            break;
+
+                        }
+
+                    } else {
+                        var graphNode = map.get(segment);
+                        var node = graphNode.val;
+                        var depth = node.segments;
+                        
+                        if (segments.length-1 < depth) depth = segments.length;
+
+                        //var tlds = [segment];   // tld
+                        results.tlds.push( segment );
+                        idx--;
+                        depth--;
+
+                        // Now search for the slds, if it exists.
+                        while (depth > 0) for (linked in graphNode.iterator()) {
+                            if (linked.val == segments[idx]) {
+                                results.tlds.push( linked.val );
+                                //trace(graph.findNode(linked));
+                                idx--;
+                                depth--;
+                                //trace(depth);
+                                break;
+
+                            }
+
+                        }
+                        //if (subdomains.length > 0) results.subdomains = subdomains;
+
+                    }
+
+                    if (results.tlds.length > 1) results.tlds.reverse();
+                        //results.push( uhx.types.domains.DomainParts.Tld(tlds) );
+
+                        if (idx >= 0) {
+                            results.domain = segments[idx--];
+
+                        }
+
+                        results.subdomains = (idx >= 0) ? segments.slice(0, idx+1) : [];
+
+                    /*idx--;
+
+                }*/
+
+
+                return results.tlds.length == 0 ? haxe.ds.Option.None : {
+                    var r = [];
+                    if (results.subdomains.length > 0) r.push( uhx.types.domains.DomainParts.Subdomain(results.subdomains) );
+                    r.push( uhx.types.domains.DomainParts.Domain(results.domain) );
+                    r.push( uhx.types.domains.DomainParts.Tld(results.tlds) );
+                    haxe.ds.Option.Some(r);
+                }
+            }
+            //public static var icann:uhx.types.Recursive = $mapExpression;
+            public static var graph:de.polygonal.ds.Graph<uhx.types.domains.Node>;
+            private static var nodes:Array<de.polygonal.ds.GraphNode<uhx.types.domains.Node>>;
+            private static var map:Map<String, de.polygonal.ds.GraphNode<uhx.types.domains.Node>>;
+            private static function singleLink(root:de.polygonal.ds.GraphNode<uhx.types.domains.Node>, indexes:Array<Int>):Void {
+                map.set(root.val.val, root);
+                for (i in indexes) graph.addSingleArc(root, nodes[i]);
+            }
+            private static function newNode(val:String, type:Bool = false, maxLength:Int = 0, segments = 0):de.polygonal.ds.GraphNode<uhx.types.domains.Node> {
+                var gn = graph.add(new uhx.types.domains.Node(val, type, maxLength, segments));
+                if (type) map.set(val, gn);
+                return gn;
+            }
+            private static function __init__() {
+                    $graphExpr;
+            }
+            
+        }
+        
         td.pack = ['uhx', 'types'];
         td.fields = (macro class Tmp {
                 // This needs to be the first field.
@@ -309,54 +404,58 @@ class Build {
 
     private static function convertGraph(graph:Graph<Node>, root:Map<String, GraphNode<Node>>):Expr {
         var results:Array<Expr> = [];///[macro graph = new de.polygonal.ds.Graph<uhx.types.domains.Node>(), macro map = new Map<String, de.polygonal.ds.GraphNode<uhx.types.domains.Node>>()];
-        var rootCreations:Array<Expr> = [];
-        var nodeCreations:Array<Expr> = [];
+        var creations:Array<Expr> = [];
         var rootArcs:Array<Expr> = [];
-        var nodeArcs:Array<Expr> = [];
         var positionMap = new Map<String, Int>();
 
         graph.iter( function(node) {
-            var arcs = (node.type) ? rootArcs : nodeArcs;
-            var creations = (node.type) ? rootCreations : nodeCreations;
-            //if (node.type) {
-                var index = (node.type) ?
-                    creations.push( macro graph.add( new uhx.types.domains.Node($v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments}) )) 
-                    : creations.push( macro graph.add( new uhx.types.domains.Node($v{node.val} )) );
-                positionMap.set( node.val, index );
-                //creations.push( macro map.set( $v{node.val}, graph.add( new uhx.types.domains.Node($v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments})) ) );
-
-            //} else {
-                //creations.push( macro graph.add( new uhx.types.domains.Node($v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments}) ) );
-
-            //}
-            //if (processed.lastIndexOf( node.val ) == -1) processed.push( node.val );
+            var index = creations.push( (node.type) ?
+                macro newNode( $v{node.val}, $v{node.type}, $v{node.maxLength}, $v{node.segments}) 
+                : macro newNode( $v{node.val} ) );
+            positionMap.set( node.val, index-1 );
 
         } );
 
         graph.iter( function(node) {
-            if (node.type && node.segments > 1) {
-                for (target in root.get(node.val).iterator()) {
-                    rootArcs.push( macro graph.addSingleArc( nodes[$v{positionMap.get(node.val)}], nodes[$v{positionMap.get(target.val)}] ) );
+            if (node.type) {
+                if (node.segments > 1) {
+                    var targets = [];
+                    
+                    for (target in root.get(node.val).iterator()) {
+                        targets.push( macro $v{positionMap.get(target.val)} );
 
-                }
+                    }
+                    
+                    if (targets.length > 0) {
+                        rootArcs.push( macro singleLink(nodes[$v{positionMap.get(node.val)}], $a{targets}) );
+
+                    } /*else {
+                        rootArcs.push( macro map.set($v{node.val}, nodes[$v{positionMap.get(node.val)}]) );
+
+                    }*/
+                    
+                }/* else {
+                    rootArcs.push( macro map.set($v{node.val}, nodes[$v{positionMap.get(node.val)}]) );
+
+                }*/
 
             }
 
         } );
-
-        results = results.concat( rootCreations ).concat( nodeCreations );
-        trace( results.length, rootCreations.length, nodeCreations.length );
+        
+        results = results.concat( creations );
+        trace( results.length );
         return macro @:mergeBlock {
-            var graph = new de.polygonal.ds.Graph<uhx.types.domains.Node>();
-            var map = new Map<String, de.polygonal.ds.GraphNode<uhx.types.domains.Node>>();
-            var nodes:Array<de.polygonal.ds.GraphNode<uhx.types.domains.Node>> = $a{results};
-            for (node in nodes) {
+            graph = new de.polygonal.ds.Graph<uhx.types.domains.Node>();
+            map = new Map<String, de.polygonal.ds.GraphNode<uhx.types.domains.Node>>();
+            nodes = $a{results};
+            /*for (node in nodes) {
                 if (node.val.type) map.set(node.val.val, node);
                 //graph.addNode(node);
 
-            }
+            }*/
             @:mergeBlock $b{rootArcs};
-            graph;
+            //graph;
         }
     }
 
