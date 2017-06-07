@@ -14,11 +14,4 @@
 
 -main Main
 
---each
-
--cp gen
---macro gen.Build.generate()
-
---next
-
---macro Main.main()
+-js bin/domain.js

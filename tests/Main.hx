@@ -18,12 +18,12 @@ using uhx.types.Domain;
     }
 
     public function new() {
-
+        //trace( uhx.types.Domain.graph );
     }
 
     public function testUniversityOfOxford() {
         var values = 'www.ox.ac.uk'.parse();
-        
+        //trace(values);
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -40,7 +40,7 @@ using uhx.types.Domain;
 
     public function testAwsS3() {
         var values = 'cdn.blah.com.s3.amazonaws.com'.parse();
-
+        //trace( values );
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -56,7 +56,7 @@ using uhx.types.Domain;
 
     public function testChinaIDN_TLD() {
         var values = 'sub.random.中国'.parse();
-        
+        //trace( values );
         switch values {
             case Some(parts):
                 Assert.equals( 3, parts.length );
@@ -72,31 +72,31 @@ using uhx.types.Domain;
     public function testFetchChinaIDN_TLD() {
         var cn_idn = '中国';
         var cn_cc = 'cn';
-        Assert.isTrue( icann.exists(cn_cc),  'China\'s ccTLD should exist in the toplevel list.' );
-        Assert.isTrue( icann.exists(cn_idn), 'China\'s IDN ccTLD should exist in the toplevel list.' );
-        var cn_idnMap = switch icann.get(cn_idn) {
-            case Some(m):
-                Assert.isTrue(Lambda.count(m) > 0, 'The IDN should not be empty.');
-                m;
+        Assert.isTrue( Domain.exists(cn_cc),  'China\'s ccTLD should exist in the toplevel list.' );
+        Assert.isTrue( Domain.exists(cn_idn), 'China\'s IDN ccTLD should exist in the toplevel list.' );
+        var cn_idnNode = Domain.get(cn_idn);
 
-            case None:
-                Assert.fail('The IDN map was empty.');
-                null;
-        }
-        var cn_tldMap = switch icann.get(cn_cc) {
-            case Some(m):
-                Assert.isTrue(Lambda.count(m) > 0, 'The TLD should not be empty.');
-                m;
-
-            case None:
-                Assert.fail('The TLD map was empty.');
-                null;
+        if (cn_idnNode != null) {
+            Assert.isTrue(cn_idnNode.numArcs > 0, 'The IDN should not be empty.');
+        } else {
+            Assert.fail('The IDN map was empty.');
         }
 
-        var tld_str = '' + [for (k in cn_tldMap.keys()) k];
-        var idn_str = '' + [for (k in cn_idnMap.keys()) k];
+        var cn_tldNode = Domain.get(cn_cc);
         
-        Assert.equals( tld_str, idn_str );
+        if (cn_tldNode != null) {
+            Assert.isTrue(cn_tldNode.numArcs > 0, 'The TLD should not be empty.');
+        
+        } else {
+            Assert.fail('The TLD map was empty.');
+            
+        }
+
+        for (n in cn_tldNode) {
+            var g = @:privateAccess Domain.graph.findNode(n);
+            Assert.isTrue( cn_idnNode.isConnected(g), '${n.val} should be connected to ${cn_idnNode.val.val}.' );
+
+        }
     }
 
     public function testCustom() {
@@ -104,7 +104,8 @@ using uhx.types.Domain;
         var uri2 = 'www.haxe.org';
         var value1 = uri1.parse([s -> s == '*'], [s -> s == 'custom']);
         var value2 = uri2.parse([s -> s == '*'], [s -> s == 'custom']);
-        
+        //trace( value1 );
+        //trace( value2 );
         switch value1 {
             case Some(parts):
                 Assert.equals( 3, parts.length );
