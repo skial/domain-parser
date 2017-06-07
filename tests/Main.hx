@@ -72,31 +72,31 @@ using uhx.types.Domain;
     public function testFetchChinaIDN_TLD() {
         var cn_idn = '中国';
         var cn_cc = 'cn';
-        Assert.isTrue( icann.exists(cn_cc),  'China\'s ccTLD should exist in the toplevel list.' );
-        Assert.isTrue( icann.exists(cn_idn), 'China\'s IDN ccTLD should exist in the toplevel list.' );
-        var cn_idnMap = switch icann.get(cn_idn) {
-            case Some(m):
-                Assert.isTrue(Lambda.count(m) > 0, 'The IDN should not be empty.');
-                m;
+        Assert.isTrue( Domain.exists(cn_cc),  'China\'s ccTLD should exist in the toplevel list.' );
+        Assert.isTrue( Domain.exists(cn_idn), 'China\'s IDN ccTLD should exist in the toplevel list.' );
+        var cn_idnNode = Domain.get(cn_idn);
 
-            case None:
-                Assert.fail('The IDN map was empty.');
-                null;
-        }
-        var cn_tldMap = switch icann.get(cn_cc) {
-            case Some(m):
-                Assert.isTrue(Lambda.count(m) > 0, 'The TLD should not be empty.');
-                m;
-
-            case None:
-                Assert.fail('The TLD map was empty.');
-                null;
+        if (cn_idnNode != null) {
+            Assert.isTrue(cn_idnNode.numArcs > 0, 'The IDN should not be empty.');
+        } else {
+            Assert.fail('The IDN map was empty.');
         }
 
-        var tld_str = '' + [for (k in cn_tldMap.keys()) k];
-        var idn_str = '' + [for (k in cn_idnMap.keys()) k];
+        var cn_tldNode = Domain.get(cn_cc);
         
-        Assert.equals( tld_str, idn_str );
+        if (cn_tldNode != null) {
+            Assert.isTrue(cn_tldNode.numArcs > 0, 'The TLD should not be empty.');
+        
+        } else {
+            Assert.fail('The TLD map was empty.');
+            
+        }
+
+        for (n in cn_tldNode) {
+            var g = @:privateAccess Domain.graph.findNode(n);
+            Assert.isTrue( cn_idnNode.isConnected(g), '${n.val} should be connected to ${cn_idnNode.val.val}.' );
+
+        }
     }
 
     public function testCustom() {

@@ -21,8 +21,4 @@
 
 --next
 
--js bin/domain.js
-
---next 
-
--neko bin/domain.n
+--macro Main.main()

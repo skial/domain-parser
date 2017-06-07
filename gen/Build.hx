@@ -79,22 +79,26 @@ class Build {
                         var key = new Node(cc, Root, cc.uLength(), parts.length);
                         hash.set(cc, key);
                         index.set(cc, ccnode = graph.add(key));
-                        key;
 
                     }
 
                     if (index.exists(idn)) {
                         idnnode = index.get(idn);
+                        idnnode.val.maxLength = idnnode.val.val.uLength() + ccnode.val.maxLength - ccnode.val.val.uLength();
+                        idnnode.val.segments = ccnode.val.segments;
 
                     } else {
-                        var key = new Node(idn, Root, idn.uLength(), parts.length);
+                        var key = new Node(idn, Root, idn.uLength() + ccnode.val.maxLength - ccnode.val.val.uLength(), ccnode.val.segments/* idn.uLength(), parts.length*/);
                         hash.set(idn, key);
                         index.set(idn, idnnode = graph.add(key));
-                        key;
 
                     }
 
-                    graph.addMutualArc(idnnode, ccnode);
+                    for (target in ccnode.iterator()) {
+                        var gnode = graph.findNode(target);
+                        if (!idnnode.isConnected(gnode)) graph.addSingleArc(idnnode, gnode);
+
+                    }
 
                 }
 
@@ -159,132 +163,21 @@ class Build {
             }
             
         }
-        
+        trace( index.get('中国') );
         var graphExpr = convertGraph(graph, index);
         '${Sys.getCwd()}/info.txt'.saveContent( new haxe.macro.Printer().printExpr(graphExpr).replace('de.polygonal.ds.Graph', 'Graph').replace('uhx.types.domains.Node', 'Node') );
         //var fields = toFields(tldMap, idnMap);
         //var mapExpression = toMapExpression(tldMap, true, idnMap);
 
         var td = macro class Domain {
-/*
-            public static function parse(domain:String, ?tlds:Array<String->Bool>, ?slds:Array<String->Bool>):haxe.ds.Option<Array<uhx.types.domains.DomainParts>> {
-                var result = haxe.ds.Option.None;
+            public static function exists(tld:String):Bool {
+                return map.exists(tld);
+            }
 
-                var parts = domain.split('.');
-                var len = parts.length-1;
-                var idx = len;
-                var map = icann;
+            public static function get(tld:String):Null<de.polygonal.ds.GraphNode<uhx.types.domains.Node>> {
+                return map.get(tld);
+            }
 
-                while (idx != -1) {
-                    var part = parts[idx];
-                    var custom:Array<String->Bool> = null;
-
-                    if (idx == len) custom = tlds;
-                    else if (idx == len - 1) custom = slds;
-                    
-                    //if (idx == len) trace(idx, len, 'tlds');
-                    //else if (idx == len - 1) trace(idx, len, 'slds');
-
-                    var customMatched = false;
-                    if (custom != null && custom.length > 0) {
-                        for (method in custom) if ((customMatched = method(part))) {
-                            if (result.match(haxe.ds.Option.None)) {
-                                result = haxe.ds.Option.Some([uhx.types.domains.DomainParts.Tld([part])]);
-
-                            } else {
-                                switch result {
-                                    case haxe.ds.Option.Some(results):
-                                        for (result in results) switch result {
-                                            case uhx.types.domains.DomainParts.Tld(p): p.push(part);
-                                            case _:
-                                        }
-
-                                    case _:
-
-                                }
-
-                            }
-                            break;
-                            //result = haxe.ds.Option.Some([uhx.types.domains.DomainParts.Tld([part])]);
-
-                        }
-
-                        if (customMatched) {
-                            idx--;
-                            continue;
-
-                        }
-
-                    }
-                    
-                    if (!customMatched && map.exists(part)) {
-                        var value = map.get(part);
-
-                        if (result.match(haxe.ds.Option.None)) {
-                            result = haxe.ds.Option.Some([uhx.types.domains.DomainParts.Tld([part])]);
-
-                        } else {
-                            switch result {
-                                case haxe.ds.Option.Some(results):
-                                    for (result in results) switch result {
-                                        case uhx.types.domains.DomainParts.Tld(p): p.push(part);
-                                        case _:
-                                    }
-
-                                case _:
-
-                            }
-
-                        }
-
-                        switch value {
-                            case haxe.ds.Option.Some(m): map = m;
-                            case _:
-                        }
-
-                    } else {
-                        break;
-
-                    }
-
-                    idx--;
-
-                }
-
-                switch result {
-                    case haxe.ds.Option.Some(results):
-                        switch results[0] {
-                            case uhx.types.domains.DomainParts.Tld(p) if (p.length > 1):
-                                p.reverse();
-
-                            case _:
-
-                        }
-
-                        if (idx >= 0) {
-                            results.push(uhx.types.domains.DomainParts.Domain(parts[idx--]));
-
-                        }
-
-                        var subdomains = [];
-                        while (idx != -1) {
-                            subdomains.push(parts[idx--]);
-
-                        }
-                        if (subdomains.length > 0) {
-                            subdomains.reverse();
-                            results.push(uhx.types.domains.DomainParts.Subdomain(subdomains));
-
-                        }
-
-                        results.reverse();
-
-                    case _:
-
-                }
-
-                return result;
-            }*/
             public static function parse(domain:String, ?tlds:Array<String->Bool>, ?slds:Array<String->Bool>):haxe.ds.Option<Array<uhx.types.domains.DomainParts>> {
                 var results = {
                     tlds:[],
@@ -325,15 +218,23 @@ class Build {
                         results.tlds.push( segment );
                         idx--;
                         depth--;
-
+                        
                         // Now search for the slds, if it exists.
-                        while (depth > 0) for (linked in graphNode.iterator()) {
-                            if (linked.val == segments[idx]) {
-                                results.tlds.push( linked.val );
-                                //trace(graph.findNode(linked));
-                                idx--;
-                                depth--;
-                                //trace(depth);
+                        while (depth > 0) {
+                            if (graphNode.numArcs > 0) for (linked in graphNode.iterator()) {
+                                if (linked.val == segments[idx]) {
+                                    results.tlds.push( linked.val );
+                                    //trace(graph.findNode(linked));
+                                    idx--;
+                                    depth--;
+                                    //trace(depth);
+                                    break;
+
+                                } else {
+                                    depth = 0;
+                                }
+
+                            } else {
                                 break;
 
                             }
@@ -365,6 +266,7 @@ class Build {
                     r.push( uhx.types.domains.DomainParts.Tld(results.tlds) );
                     haxe.ds.Option.Some(r);
                 }
+
             }
             //public static var icann:uhx.types.Recursive = $mapExpression;
             public static var graph:de.polygonal.ds.Graph<uhx.types.domains.Node>;
@@ -429,15 +331,19 @@ class Build {
                     if (targets.length > 0) {
                         rootArcs.push( macro singleLink(nodes[$v{positionMap.get(node.val)}], $a{targets}) );
 
-                    } /*else {
-                        rootArcs.push( macro map.set($v{node.val}, nodes[$v{positionMap.get(node.val)}]) );
+                    }
+                    
+                } else {
+                    /*for (target in root.get(node.val).iterator()) {
+                        var gnode = graph.findNode(target);
+                        if (root.get(node.val).isMutuallyConnected( gnode )) {
+                            rootArcs.push( macro graph.addMutualArc(nodes[$v{positionMap.get(node.val)}], nodes[$v{positionMap.get(target.val)}]) );
+
+                        }
 
                     }*/
-                    
-                }/* else {
-                    rootArcs.push( macro map.set($v{node.val}, nodes[$v{positionMap.get(node.val)}]) );
 
-                }*/
+                }
 
             }
 
