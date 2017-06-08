@@ -27,6 +27,7 @@ International ccTLD's, like `中国` for China, return the same list as `cn` wou
 ```Haxe
 class Domain {
     
+    public static function initialize():Void;
     public static function parse(domain:String, ?tlds:Array<String->Bool>, ?slds:Array<String->Bool>):haxe.ds.Option<Array<DomainParts>>;
     
 }
