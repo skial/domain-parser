@@ -11,6 +11,9 @@
 #-debug
 -dce full
 -D analyzer-optimize
+#-D eval-stack
+#-D eval-debugger
+#-D eval-times
 
 -main Main
 
@@ -19,6 +22,6 @@
 -cp gen
 --macro gen.Build.generate()
 
---next
+#--next
 
---macro Main.main()
+#--macro Main.main()
