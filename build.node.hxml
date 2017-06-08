@@ -3,11 +3,8 @@
 
 -lib utest
 -lib unifill
--lib tink_core
--lib tink_chunk
--lib tink_macro
--lib polygonal-ds
 -lib hxnodejs
+-lib polygonal-ds
 
 #-debug
 -dce full
