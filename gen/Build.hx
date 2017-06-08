@@ -4,12 +4,10 @@ import haxe.ds.Option;
 import haxe.macro.Expr;
 import haxe.macro.Printer;
 import haxe.macro.Context;
-import haxe.Constraints.IMap;
 import de.polygonal.ds.Graph;
 import uhx.types.domains.Node;
 import de.polygonal.ds.GraphNode;
 import uhx.types.domains.Node.NodeType;
-import uhx.types.domains.AssociativeArray;
 
 using Lambda;
 using gen.Build;
@@ -17,8 +15,6 @@ using StringTools;
 using sys.io.File;
 using sys.FileSystem;
 using unifill.Unifill;
-
-typedef Mapped = AssociativeArray<Map<String, Mapped>>;
 
 // Based on https://github.com/peerigon/parse-domain/blob/master/lib/build/buildRegex.js
 class Build {
@@ -259,27 +255,6 @@ class Build {
 
                     results.tlds.push( segment );
                     idx--;
-                    //depth--;
-
-                    /*while (depth > 0) {
-                        if (graphNode.numArcs > 0) for (linked in graphNode.iterator()) {
-                            if (linked.val == segments[idx]) {
-                                results.tlds.push( linked.val );
-                                idx--;
-                                depth--;
-                                break;
-
-                            } else {
-                                depth = 0;
-                            }
-
-                        } else {
-                            break;
-
-                        }
-
-                    }*/
-
                     
                     while (graphNode != null && graphNode.numArcs > 0) {
                         graphNode = search(graphNode, segments[idx--]);

@@ -11,6 +11,9 @@
 #-debug
 -dce full
 -D analyzer-optimize
+#-D eval-stack
+#-D eval-debugger
+#-D eval-times
 
 -main Main
 
