@@ -5,8 +5,9 @@
 -lib unifill
 -lib polygonal-ds
 
-#-debug
--dce full
+-debug
+#-dce full
+-D complete
 -D analyzer-optimize
 
 -main Main

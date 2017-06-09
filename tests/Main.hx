@@ -177,4 +177,44 @@ using uhx.types.Domain;
 		}
 	}
 
+    // From uhx.types.DomainSpec
+    public function test_yamanashi_yamanashi_jp() {
+		var values = "www.example.yamanashi.yamanashi.jp".parse();
+        
+		switch values {
+			case Some(parts):{
+                Assert.equals(3, parts.length);
+				switch parts[0] {
+					case Subdomain(s):{
+						Assert.equals(1, s.length);
+						Assert.equals('www', s[0]);
+					}
+					case _:{
+						Assert.fail('Subdomain should not be empty.');
+					}
+				}
+				switch parts[1] {
+					case Domain(s):{
+						Assert.equals('example', s);
+					}
+					case _:{
+						Assert.fail('Domain should not be empty.');
+					}
+				}
+				switch parts[2] {
+					case Tld(s):{
+						Assert.equals(3, s.length);
+						Assert.equals('' + ["yamanashi", "yamanashi", "jp"], '' + s);
+					};
+					case _:{
+						Assert.fail('Tld should not be empty.');
+					}
+				}
+			}
+			case None:{
+				Assert.fail("www.example.yamanashi.yamanashi.jp should not have parsed into an empty result.");
+			}
+		}
+	}
+
 }

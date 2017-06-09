@@ -178,7 +178,7 @@ class Build {
                     index.set(part, node = graph.add(r));
                 }
 
-                if (prevNode != null) graph.addSingleArc(prevNode, node);
+                if (prevNode != null && !prevNode.isConnected(node)) graph.addSingleArc(prevNode, node);
 
             }
             
@@ -207,7 +207,10 @@ class Build {
             private static function search(node:de.polygonal.ds.GraphNode<uhx.types.domains.Node>, val:String):Null<de.polygonal.ds.GraphNode<uhx.types.domains.Node>> {
                 var result = null;
 				
-				for (linked in node) {
+				if (node.val.val == val) {
+                    result = node;
+
+                } else for (linked in node) {
 					if (linked.val == val) {
 						result = graph.findNode(linked);
 						break;
@@ -256,7 +259,7 @@ class Build {
                     results.tlds.push( segment );
                     idx--;
                     
-                    while (graphNode != null && graphNode.numArcs > 0) {
+                    while (graphNode != null) {
                         graphNode = search(graphNode, segments[idx--]);
                         if (graphNode != null) {
                             results.tlds.push( graphNode.val.val ); 
@@ -333,28 +336,42 @@ class Build {
 
         } );
 
+        var rootsProcessed = [];
+        var pairs = new Map<Int, Array<Int>>();
         graph.iter( function(node) {
             var g = graph.findNode(node);
+            var source = positionMap.get(node.val);
+            var values = pairs.exists(source) ? pairs.get(source) : [];
             //if (node.type) {
                 if (g.numArcs > 0) {
                     var targets = [];
                     
                     //for (target in root.get(node.val).iterator()) {
-                    for (target in graph.findNode(node).iterator()) {                        
-                        targets.push( macro $v{positionMap.get(target.val)} );
+                    for (target in graph.findNode(node)) {   
+                        var pos = positionMap.get(target.val);
+                        if (values.indexOf(pos) == -1 && pos != source) values.push( pos );
+                        if (targets.indexOf(pos) == -1 && pos != source) targets.push( pos );
 
                     }
                     
-                    if (targets.length > 0) {
-                        rootArcs.push( macro singleLink(nodes[$v{positionMap.get(node.val)}], $a{targets}) );
+                    /*if (targets.length > 0 && rootsProcessed.indexOf(source) == -1) {
+                        rootsProcessed.push(source);
+                        rootArcs.push( macro singleLink(nodes[$v{source}], $a{targets.map(i->macro $v{i})}) );
 
-                    }
+                    }*/
                     
+                    pairs.set(source, values);
+
                 }
 
             //}
 
         } );
+
+        for (key in pairs.keys()) {
+            rootArcs.push( macro singleLink(nodes[$v{key}], $a{pairs.get(key).map(i->macro $v{i})}) );
+
+        }
         
         results = results.concat( creations );
         

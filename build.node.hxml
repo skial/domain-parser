@@ -6,8 +6,8 @@
 -lib hxnodejs
 -lib polygonal-ds
 
-#-debug
--dce full
+-debug
+#-dce full
 -D analyzer-optimize
 
 -main Main
