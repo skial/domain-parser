@@ -8,6 +8,7 @@
 
 -debug
 #-dce full
+#-D complete    # The entire DomainSpec set breaks utest or something :|
 -D analyzer-optimize
 
 -main Main
